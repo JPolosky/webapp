@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>Datos · DynamoDB</title>
 <style>
   :root { --crema:#fff6e0; --negro:#111; --amar:#ffd23f; --rosa:#ff7eb6; --azul:#6ec1ff;
@@ -66,6 +67,7 @@
   .dato span { font-weight: 600; word-break: break-word; }
   .card footer { padding: 10px 14px; border-top: 3px solid var(--negro); display: flex; gap: 10px; }
 
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .vacio { grid-column: 1 / -1; padding: 40px; text-align: center; font-weight: 800; font-size: 18px; }
   .error { background: #ffd6d6; }
 
@@ -112,7 +114,9 @@
   <div class="tools bx">
     <h2 id="titulo">Elige una tabla</h2>
     <span class="n" id="cuenta"></span>
+    <label for="buscar" class="sr">Buscar registros</label>
     <input id="buscar" placeholder="🔎 Buscar..." oninput="pintar()">
+    <label for="ordenCol" class="sr">Ordenar por columna</label>
     <select id="ordenCol" onchange="pintar()"></select>
     <button class="btn blanco" id="ordenDir" onclick="cambiarDir()" title="Cambiar sentido">↑ A-Z</button>
     <button class="btn verde" onclick="abrirForm(null)">+ Nuevo</button>
@@ -124,7 +128,7 @@
 <!-- Crear / editar -->
 <div class="ov" id="ovForm">
   <div class="modal bx">
-    <h3 id="fTitulo"></h3>
+    <h3 id="fTitulo">Registro</h3>
     <p class="s" id="fSub"></p>
     <div id="fCampos"></div>
     <div class="ferr" id="fErr"></div>
@@ -156,6 +160,7 @@
   const $ = id => document.getElementById(id);
   const cop = n => "$" + Number(n).toLocaleString("es-CO");
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
   function toast(texto, ok = true) {
     const t = $("toast");
@@ -260,7 +265,7 @@
       const url = "/api/" + actual + (editando ? "/" + encodeURIComponent(editando[clave]) : "");
       const r = await fetch(url, {
         method: editando ? "PUT" : "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
         body: JSON.stringify(cuerpo)
       });
       const d = await r.json();
@@ -283,7 +288,7 @@
 
   async function confirmarEliminar() {
     try {
-      const r = await fetch("/api/" + actual + "/" + encodeURIComponent(porBorrar[clave]), {method: "DELETE"});
+      const r = await fetch("/api/" + actual + "/" + encodeURIComponent(porBorrar[clave]), {method: "DELETE", headers: {"X-CSRFToken": csrf}});
       const d = await r.json();
       if (!r.ok || d.error) throw new Error(d.error || "Error al eliminar");
       cerrar("ovDel");

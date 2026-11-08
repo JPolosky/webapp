@@ -29,7 +29,7 @@ jobs:
           cache-dependency-path: requirements-dev.txt
 
       - name: Instalar dependencias
-        run: pip install -r requirements-dev.txt
+        run: pip install --require-hashes --only-binary :all: -r requirements-dev.txt
 
       - name: Lint (flake8)
         run: flake8 .
@@ -50,7 +50,7 @@ jobs:
           cache-dependency-path: requirements-dev.txt
 
       - name: Instalar dependencias
-        run: pip install -r requirements-dev.txt
+        run: pip install --require-hashes --only-binary :all: -r requirements-dev.txt
 
       - name: Bandit (código)
         continue-on-error: true   # informativo: no bloquea

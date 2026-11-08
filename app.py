@@ -1,8 +1,14 @@
+import os
+import secrets
 from decimal import Decimal
 from flask import Flask, jsonify, render_template, request
+from flask_wtf.csrf import CSRFProtect
 import boto3
 
 app = Flask(__name__)
+# Definir SECRET_KEY en el entorno cuando se usen varios procesos/instancias.
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+csrf = CSRFProtect(app)
 
 REGION = "us-east-1"   # <-- cámbiala si tus tablas están en otra región
 
@@ -266,4 +272,6 @@ def eliminar(tabla, valor):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80)
+    # Por defecto solo escucha en local; en EC2 define HOST (p. ej. la IP privada
+    # de la instancia) o usa un servidor/proxy inverso delante.
+    app.run(host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", "80")))
