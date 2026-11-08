@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secretos y llaves (nunca subir)
+*.pem
+*.ppk
+.env
+.env.*
+.aws/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Comprimidos
+*.zip
+*.tar.gz

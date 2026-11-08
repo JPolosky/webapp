@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datos · DynamoDB</title>
+<style>
+  :root { --crema:#fff6e0; --negro:#111; --amar:#ffd23f; --rosa:#ff7eb6; --azul:#6ec1ff;
+          --verde:#7be495; --rojo:#ff5c5c; --lila:#b79cff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--crema); color: var(--negro);
+         font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+         background-image: radial-gradient(#11111122 1.2px, transparent 1.2px); background-size: 22px 22px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 60px; }
+
+  /* Cabecera */
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+  h1 { margin: 0; font-size: clamp(30px, 5vw, 48px); line-height: 1; letter-spacing: -1px; }
+  h1 span { background: var(--amar); padding: 0 8px; border: 3px solid var(--negro); display: inline-block; transform: rotate(-1.5deg); }
+  .top p { margin: 10px 0 0; font-weight: 600; }
+  .bx { border: 3px solid var(--negro); box-shadow: 5px 5px 0 var(--negro); background: #fff; }
+  .go { display: inline-block; text-decoration: none; color: var(--negro); background: var(--rosa); font-weight: 800;
+        padding: 12px 18px; transition: .12s; }
+  .go:hover, .btn:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--negro); }
+  .go:active, .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--negro); }
+
+  /* Resumen */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; margin-bottom: 28px; }
+  .stat { padding: 14px 16px; }
+  .stat small { font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: .08em; }
+  .stat b { display: block; font-size: 30px; margin-top: 4px; }
+
+  /* Selector de tablas */
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .chip { font: inherit; font-weight: 800; padding: 9px 16px; cursor: pointer; text-transform: capitalize;
+          border: 3px solid var(--negro); background: #fff; box-shadow: 3px 3px 0 var(--negro); transition: .12s; }
+  .chip:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--negro); }
+  .chip.on { background: var(--negro); color: var(--amar); }
+
+  /* Barra de herramientas */
+  .tools { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 14px; margin-bottom: 22px; background: var(--azul); }
+  .tools h2 { margin: 0 8px 0 0; font-size: 22px; text-transform: capitalize; }
+  .tools .n { font-weight: 700; margin-right: auto; }
+  input, select { font: inherit; padding: 10px 12px; border: 3px solid var(--negro); background: #fff; outline: none; min-width: 0; }
+  input:focus, select:focus { background: #fffbd0; }
+  input[readonly] { background: #e6e6e6; cursor: not-allowed; }
+  .btn { font: inherit; font-weight: 800; padding: 10px 16px; cursor: pointer; border: 3px solid var(--negro);
+         box-shadow: 4px 4px 0 var(--negro); transition: .12s; color: var(--negro); }
+  .btn.verde { background: var(--verde); } .btn.amar { background: var(--amar); }
+  .btn.rojo { background: var(--rojo); } .btn.blanco { background: #fff; }
+  .btn.mini { padding: 6px 10px; font-size: 13px; box-shadow: 3px 3px 0 var(--negro); }
+
+  /* Tarjetas */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+  .card { background: #fff; border: 3px solid var(--negro); box-shadow: 6px 6px 0 var(--negro); display: flex; flex-direction: column; transition: .12s; }
+  .card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--negro); }
+  .card header { padding: 10px 14px; border-bottom: 3px solid var(--negro); font-family: Consolas, monospace; font-weight: 800; font-size: 16px; }
+  .card:nth-child(5n+1) header { background: var(--amar); }
+  .card:nth-child(5n+2) header { background: var(--rosa); }
+  .card:nth-child(5n+3) header { background: var(--azul); }
+  .card:nth-child(5n+4) header { background: var(--verde); }
+  .card:nth-child(5n+5) header { background: var(--lila); }
+  .card .cuerpo { padding: 12px 14px; flex: 1; }
+  .dato { margin-bottom: 9px; }
+  .dato small { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; opacity: .65; }
+  .dato span { font-weight: 600; word-break: break-word; }
+  .card footer { padding: 10px 14px; border-top: 3px solid var(--negro); display: flex; gap: 10px; }
+
+  .vacio { grid-column: 1 / -1; padding: 40px; text-align: center; font-weight: 800; font-size: 18px; }
+  .error { background: #ffd6d6; }
+
+  /* Ventanas */
+  .ov { position: fixed; inset: 0; background: #111a; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+  .ov.on { display: flex; }
+  .modal { background: var(--crema); width: 440px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 22px; }
+  .modal h3 { margin: 0 0 4px; font-size: 24px; }
+  .modal .s { margin: 0 0 16px; font-weight: 600; }
+  .campo { margin-bottom: 12px; }
+  .campo label { display: block; font-weight: 800; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; }
+  .campo input { width: 100%; }
+  .acciones { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+  .ferr { color: #b00020; font-weight: 800; min-height: 20px; }
+
+  #toast { position: fixed; bottom: 22px; right: 22px; padding: 14px 20px; font-weight: 800; z-index: 30;
+           border: 3px solid var(--negro); box-shadow: 5px 5px 0 var(--negro); background: var(--verde);
+           display: none; }
+  #toast.on { display: block; } #toast.bad { background: var(--rojo); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>Mis <span>datos</span> en la nube</h1>
+      <p>EC2 + Flask + DynamoDB · todo en tiempo real</p>
+    </div>
+    <a class="go bx" href="/consultas">🔍 Ir a Consultas →</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat bx" style="background:var(--lila)"><small>Clientes</small><b id="k-clientes">…</b></div>
+    <div class="stat bx" style="background:var(--amar)"><small>Productos</small><b id="k-productos">…</b></div>
+    <div class="stat bx" style="background:var(--verde)"><small>Ventas</small><b id="k-ventas">…</b></div>
+    <div class="stat bx" style="background:var(--rosa)"><small>Ingresos</small><b id="k-ingresos">…</b></div>
+  </div>
+
+  <div class="chips" id="menu">
+    {% for t in tablas %}<button class="chip" data-t="{{ t }}">{{ t }}</button>{% endfor %}
+  </div>
+
+  <div class="tools bx">
+    <h2 id="titulo">Elige una tabla</h2>
+    <span class="n" id="cuenta"></span>
+    <input id="buscar" placeholder="🔎 Buscar..." oninput="pintar()">
+    <select id="ordenCol" onchange="pintar()"></select>
+    <button class="btn blanco" id="ordenDir" onclick="cambiarDir()" title="Cambiar sentido">↑ A-Z</button>
+    <button class="btn verde" onclick="abrirForm(null)">+ Nuevo</button>
+  </div>
+
+  <div class="grid" id="contenido"><div class="vacio bx">Elige una tabla arriba 👆</div></div>
+</div>
+
+<!-- Crear / editar -->
+<div class="ov" id="ovForm">
+  <div class="modal bx">
+    <h3 id="fTitulo"></h3>
+    <p class="s" id="fSub"></p>
+    <div id="fCampos"></div>
+    <div class="ferr" id="fErr"></div>
+    <div class="acciones">
+      <button class="btn blanco" onclick="cerrar('ovForm')">Cancelar</button>
+      <button class="btn amar" id="fGuardar" onclick="guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Eliminar -->
+<div class="ov" id="ovDel">
+  <div class="modal bx">
+    <h3>¿Eliminar registro?</h3>
+    <p class="s" id="dTexto"></p>
+    <div class="acciones">
+      <button class="btn blanco" onclick="cerrar('ovDel')">Cancelar</button>
+      <button class="btn rojo" onclick="confirmarEliminar()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let datos = [], cols = [], tipos = {}, clave = "", vista = [];
+  let asc = true, actual = "", editando = null, porBorrar = null;
+
+  const $ = id => document.getElementById(id);
+  const cop = n => "$" + Number(n).toLocaleString("es-CO");
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  function toast(texto, ok = true) {
+    const t = $("toast");
+    t.textContent = (ok ? "✅ " : "⚠️ ") + texto;
+    t.className = "on" + (ok ? "" : " bad");
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.className = "", 3000);
+  }
+
+  function valor(col, v) {
+    if (v === undefined || v === null || v === "") return "—";
+    if (/^(precio|total)$/.test(col)) return cop(v);
+    return esc(v);
+  }
+
+  function cambiarDir() { asc = !asc; $("ordenDir").textContent = asc ? "↑ A-Z" : "↓ Z-A"; pintar(); }
+
+  function pintar() {
+    const q = $("buscar").value.toLowerCase();
+    const col = $("ordenCol").value;
+    vista = datos.filter(d => JSON.stringify(d).toLowerCase().includes(q));
+    if (col) vista.sort((a, b) => {
+      const x = a[col] ?? "", y = b[col] ?? "";
+      return (x > y ? 1 : x < y ? -1 : 0) * (asc ? 1 : -1);
+    });
+    $("cuenta").textContent = vista.length + " registros";
+    if (!vista.length) { $("contenido").innerHTML = '<div class="vacio bx">Sin registros 📭</div>'; return; }
+    $("contenido").innerHTML = vista.map((f, i) => `
+      <article class="card">
+        <header>${esc(f[clave] ?? "")}</header>
+        <div class="cuerpo">` +
+          cols.filter(c => c !== clave).map(c =>
+            `<div class="dato"><small>${esc(c)}</small><span>${valor(c, f[c])}</span></div>`).join("") +
+        `</div>
+        <footer>
+          <button class="btn mini amar" onclick="abrirForm(${i})">✏️ Editar</button>
+          <button class="btn mini rojo" onclick="pedirEliminar(${i})">🗑️ Borrar</button>
+        </footer>
+      </article>`).join("");
+  }
+
+  async function cargar(t) {
+    actual = t; asc = true; $("ordenDir").textContent = "↑ A-Z";
+    $("buscar").value = "";
+    $("titulo").textContent = t;
+    document.querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+    $("contenido").innerHTML = '<div class="vacio bx">Cargando... ⏳</div>';
+    try {
+      const r = await fetch("/api/" + t);
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      datos = d.items; cols = d.columnas; tipos = d.tipos; clave = d.clave;
+      $("ordenCol").innerHTML = cols.map(c => `<option value="${esc(c)}">Ordenar: ${esc(c)}</option>`).join("");
+      pintar();
+    } catch (e) {
+      $("cuenta").textContent = "";
+      $("contenido").innerHTML = `<div class="vacio bx error">⚠️ ${esc(e.message)}</div>`;
+    }
+  }
+
+  async function resumen() {
+    try {
+      const d = await (await fetch("/api/resumen")).json();
+      if (d.error) throw 0;
+      ["clientes", "productos", "ventas"].forEach(k => $("k-" + k).textContent = d[k]);
+      $("k-ingresos").textContent = cop(d.ingresos);
+    } catch (e) {
+      ["clientes", "productos", "ventas", "ingresos"].forEach(k => $("k-" + k).textContent = "—");
+    }
+  }
+
+  function cerrar(id) { $(id).classList.remove("on"); }
+
+  function abrirForm(i) {
+    if (!cols.length) return;
+    editando = i === null ? null : vista[i];
+    $("fTitulo").textContent = editando ? "✏️ Editar registro" : "➕ Nuevo registro";
+    $("fSub").textContent = "Tabla: " + actual;
+    $("fErr").textContent = "";
+    $("fCampos").innerHTML = cols.map(c => {
+      const esNum = tipos[c] === "N";
+      const tipo = esNum ? "number" : (c === "fecha" ? "date" : "text");
+      const val = editando && editando[c] !== undefined ? esc(editando[c]) : "";
+      const ro = editando && c === clave ? "readonly" : "";
+      return `<div class="campo"><label>${esc(c)}${c === clave ? " (ID)" : ""}</label>` +
+             `<input id="f_${c}" type="${tipo}" ${esNum ? 'step="any"' : ""} value="${val}" ${ro}></div>`;
+    }).join("");
+    $("ovForm").classList.add("on");
+    const primero = document.querySelector("#fCampos input:not([readonly])");
+    if (primero) primero.focus();
+  }
+
+  async function guardar() {
+    const cuerpo = {};
+    cols.forEach(c => {
+      const v = $("f_" + c).value.trim();
+      if (v !== "") cuerpo[c] = tipos[c] === "N" ? Number(v) : v;
+    });
+    if (!cuerpo[clave]) { $("fErr").textContent = `El campo ${clave} es obligatorio.`; return; }
+    const btn = $("fGuardar"); btn.disabled = true; btn.textContent = "Guardando...";
+    try {
+      const url = "/api/" + actual + (editando ? "/" + encodeURIComponent(editando[clave]) : "");
+      const r = await fetch(url, {
+        method: editando ? "PUT" : "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(cuerpo)
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error || "Error al guardar");
+      cerrar("ovForm");
+      toast(editando ? "Registro actualizado" : "Registro creado");
+      await cargar(actual); resumen();
+    } catch (e) {
+      $("fErr").textContent = e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = "Guardar";
+    }
+  }
+
+  function pedirEliminar(i) {
+    porBorrar = vista[i];
+    $("dTexto").textContent = `Se borrará ${porBorrar[clave]} de la tabla ${actual}. No se puede deshacer.`;
+    $("ovDel").classList.add("on");
+  }
+
+  async function confirmarEliminar() {
+    try {
+      const r = await fetch("/api/" + actual + "/" + encodeURIComponent(porBorrar[clave]), {method: "DELETE"});
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error || "Error al eliminar");
+      cerrar("ovDel");
+      toast("Registro eliminado");
+      await cargar(actual); resumen();
+    } catch (e) {
+      cerrar("ovDel");
+      toast(e.message, false);
+    }
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") { cerrar("ovForm"); cerrar("ovDel"); }
+    if (e.key === "Enter" && $("ovForm").classList.contains("on")) guardar();
+  });
+
+  document.querySelectorAll(".chip").forEach(b => b.onclick = () => cargar(b.dataset.t));
+  resumen();
+  cargar("clientes");
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Configuración de Bandit. Sin reglas omitidas: se reportan todos los hallazgos.
+# Esperado: B104 (app.py escucha en 0.0.0.0).
+exclude_dirs:
+  - tests
+  - .venv
+  - venv

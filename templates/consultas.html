@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consultas · DynamoDB</title>
+<style>
+  :root { --crema:#fff6e0; --negro:#111; --amar:#ffd23f; --rosa:#ff7eb6; --azul:#6ec1ff;
+          --verde:#7be495; --rojo:#ff5c5c; --lila:#b79cff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--crema); color: var(--negro);
+         font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+         background-image: radial-gradient(#11111122 1.2px, transparent 1.2px); background-size: 22px 22px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 60px; }
+  .bx { border: 3px solid var(--negro); box-shadow: 5px 5px 0 var(--negro); background: #fff; }
+
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+  h1 { margin: 0; font-size: clamp(30px, 5vw, 48px); line-height: 1; letter-spacing: -1px; }
+  h1 span { background: var(--verde); padding: 0 8px; border: 3px solid var(--negro); display: inline-block; transform: rotate(-1.5deg); }
+  .top p { margin: 10px 0 0; font-weight: 600; }
+  .go { display: inline-block; text-decoration: none; color: var(--negro); background: var(--amar); font-weight: 800;
+        padding: 12px 18px; transition: .12s; }
+  .go:hover, .btn:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--negro); }
+  .go:active, .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--negro); }
+
+  .grupo { font-weight: 800; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; margin: 0 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .chip { font: inherit; font-weight: 800; padding: 9px 16px; cursor: pointer;
+          border: 3px solid var(--negro); background: #fff; box-shadow: 3px 3px 0 var(--negro); transition: .12s; }
+  .chip:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--negro); }
+  .chip.on { background: var(--negro); color: var(--amar); }
+  .chip.reto { background: var(--lila); }
+  .chip.reto.on { background: var(--negro); color: var(--lila); }
+
+  .info { padding: 16px 18px; margin-bottom: 20px; background: var(--azul); }
+  .info h2 { margin: 0 0 6px; font-size: 24px; }
+  .info p { margin: 0; font-weight: 600; line-height: 1.45; }
+
+  .barra { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; padding: 14px; margin-bottom: 22px; background: var(--amar); }
+  .f label { display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
+  input, select { font: inherit; padding: 10px 12px; border: 3px solid var(--negro); background: #fff; outline: none;
+                  width: 240px; max-width: 100%; }
+  input:focus, select:focus { background: #fffbd0; }
+  .btn { font: inherit; font-weight: 800; padding: 11px 20px; cursor: pointer; border: 3px solid var(--negro);
+         box-shadow: 4px 4px 0 var(--negro); transition: .12s; color: var(--negro); background: var(--verde); }
+  .meta { font-weight: 800; margin: 0 0 12px; min-height: 22px; }
+
+  .tabla { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { background: var(--negro); color: var(--amar); text-align: left; padding: 12px 16px; text-transform: uppercase;
+       font-size: 12px; letter-spacing: .07em; white-space: nowrap; }
+  td { padding: 12px 16px; border-top: 3px solid var(--negro); white-space: nowrap; font-weight: 600; }
+  tbody tr:nth-child(even) td { background: #fff6e0; }
+  tbody tr:hover td { background: #fffbd0; }
+  tr.tot td { background: var(--verde) !important; font-weight: 800; font-size: 17px; }
+  .id { font-family: Consolas, monospace; font-weight: 800; background: var(--amar); border: 2px solid var(--negro); padding: 2px 8px; }
+  .tag { background: var(--rosa); border: 2px solid var(--negro); padding: 2px 10px; font-weight: 800; font-size: 13px; }
+  a.m { color: #0044cc; font-weight: 700; }
+
+  .vacio { padding: 40px; text-align: center; font-weight: 800; font-size: 18px; }
+  .error { background: #ffd6d6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>Consultas a <span>DynamoDB</span></h1>
+      <p>Las consultas de CloudShell, ahora en la web</p>
+    </div>
+    <a class="go bx" href="/">← Volver al panel de datos</a>
+  </div>
+
+  <p class="grupo">Consultas básicas</p>
+  <div class="chips" id="menuBasicas"></div>
+  <p class="grupo">Retos</p>
+  <div class="chips" id="menuRetos"></div>
+
+  <div class="info bx">
+    <h2 id="titulo">Elige una consulta</h2>
+    <p id="desc">Selecciona una de las opciones de arriba.</p>
+  </div>
+
+  <div class="barra bx" id="barra"></div>
+
+  <p class="meta" id="meta"></p>
+  <div class="bx tabla" id="contenido"><div class="vacio">Elige una consulta arriba 👆</div></div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const cop = n => "$" + Number(n).toLocaleString("es-CO");
+
+  const BASICAS = [
+    {id: "cliente", t: "Cliente por ID",
+     d: "Equivale a get-item sobre la tabla clientes con la llave clienteId.",
+     p: {n: "id", etq: "ClienteId", tipo: "text", def: "C001"}},
+    {id: "productos_precio", t: "Productos caros",
+     d: "Escanea la tabla productos y filtra los que superan el precio indicado.",
+     p: {n: "min", etq: "Precio mayor a", tipo: "number", def: 1000}},
+    {id: "sucursales", t: "Sucursales por ciudad",
+     d: "Filtra la tabla sucursales según la ciudad elegida.",
+     p: {n: "ciudad", etq: "Ciudad", tipo: "select", op: "ciudades", def: "Bogotá"}}
+  ];
+  const RETOS = [
+    {id: "reto3", t: "Reto 3 · Vendidos por ciudad", reto: true,
+     d: "Busca los clientes de la ciudad, sus ventas, el productoId de cada una y consulta los productos. Muestra producto, categoría, cliente y ciudad.",
+     p: {n: "ciudad", etq: "Ciudad", tipo: "select", op: "ciudades", def: "Medellín"}},
+    {id: "reto4", t: "Reto 4 · Ingresos por categoría", reto: true,
+     d: "Flujo: Ventas → productoId → Productos → categoría → suma de cantidad × precio.",
+     p: null},
+    {id: "reto5", t: "Reto 5 · Clientes por categoría", reto: true,
+     d: "Busca los productos de la categoría, sus ventas, obtiene los clienteId, elimina duplicados y consulta Clientes.",
+     p: {n: "categoria", etq: "Categoría", tipo: "select", op: "categorias", def: "Almacenamiento"}}
+  ];
+  const TODAS = [...BASICAS, ...RETOS];
+
+  let opciones = {ciudades: [], categorias: []}, actual = null;
+
+  function menu() {
+    const btn = c => `<button class="chip ${c.reto ? "reto" : ""}" data-id="${c.id}">${esc(c.t)}</button>`;
+    $("menuBasicas").innerHTML = BASICAS.map(btn).join("");
+    $("menuRetos").innerHTML = RETOS.map(btn).join("");
+    document.querySelectorAll(".chip").forEach(b =>
+      b.onclick = () => elegir(TODAS.find(c => c.id === b.dataset.id)));
+  }
+
+  function campo(p) {
+    if (!p) return `<span style="font-weight:800">Esta consulta no necesita parámetros.</span>`;
+    if (p.tipo === "select") {
+      const lista = [...new Set([p.def, ...(opciones[p.op] || [])])];
+      return `<div class="f"><label>${p.etq}</label><select id="param">` +
+        lista.map(o => `<option ${o === p.def ? "selected" : ""}>${esc(o)}</option>`).join("") + `</select></div>`;
+    }
+    return `<div class="f"><label>${p.etq}</label><input id="param" type="${p.tipo}" value="${esc(p.def)}"></div>`;
+  }
+
+  function elegir(c) {
+    actual = c;
+    document.querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b.dataset.id === c.id));
+    $("titulo").textContent = c.t;
+    $("desc").textContent = c.d;
+    $("barra").innerHTML = campo(c.p) + `<button class="btn" onclick="ejecutar()">▶ Ejecutar consulta</button>`;
+    if ($("param")) $("param").addEventListener("keydown", e => { if (e.key === "Enter") ejecutar(); });
+    ejecutar();
+  }
+
+  function celda(i, v, r) {
+    if (v === null || v === undefined) return "";
+    if (r.dinero && r.dinero.includes(i)) return cop(v);
+    const col = r.columnas[i].toLowerCase();
+    if (/id$/.test(col)) return `<span class="id">${esc(v)}</span>`;
+    if (col === "ciudad" || col.startsWith("categor")) return `<span class="tag">${esc(v)}</span>`;
+    if (col === "correo") return `<a class="m" href="mailto:${esc(v)}">${esc(v)}</a>`;
+    return esc(v);
+  }
+
+  async function ejecutar() {
+    const c = actual; if (!c) return;
+    const t0 = performance.now();
+    $("meta").textContent = "";
+    $("contenido").innerHTML = '<div class="vacio">Consultando DynamoDB... ⏳</div>';
+    try {
+      const q = c.p ? "?" + c.p.n + "=" + encodeURIComponent($("param").value) : "";
+      const r = await fetch("/q/" + c.id + q);
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error || "Error en la consulta");
+      const ms = Math.round(performance.now() - t0);
+      const n = d.total ? d.filas.length - 1 : d.filas.length;
+      $("meta").textContent = `${n} resultado(s) · ${ms} ms`;
+      if (!d.filas.length || n === 0) {
+        $("contenido").innerHTML = `<div class="vacio">📭 ${esc(d.vacio)}</div>`; return;
+      }
+      let h = "<table><thead><tr>" + d.columnas.map(x => `<th>${esc(x)}</th>`).join("") + "</tr></thead><tbody>";
+      d.filas.forEach((f, k) => {
+        const esTotal = d.total && k === d.filas.length - 1;
+        h += `<tr class="${esTotal ? "tot" : ""}">` + f.map((v, i) => `<td>${celda(i, v, d)}</td>`).join("") + "</tr>";
+      });
+      $("contenido").innerHTML = h + "</tbody></table>";
+    } catch (e) {
+      $("contenido").innerHTML = `<div class="vacio error">⚠️ ${esc(e.message)}</div>`;
+    }
+  }
+
+  (async function () {
+    menu();
+    try { opciones = await (await fetch("/q/opciones")).json(); } catch (e) {}
+    if (!opciones.ciudades) opciones = {ciudades: [], categorias: []};
+    elegir(BASICAS[0]);
+  })();
+</script>
+</body>
+</html>
